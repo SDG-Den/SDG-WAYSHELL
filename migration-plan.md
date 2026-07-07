@@ -1,101 +1,92 @@
 # SDG-WAYSHELL Migration Plan
 
-## 1. Implement Lifecycle Scripts
+## Directory Mapping
 
-All four root-level lifecycle scripts are **empty stubs** — must be implemented:
+| Source | Installed to |
+|--------|-------------|
+| `config/SDG-WAYSHELL/wayshell.sh` | `~/.local/SDG-WAYSHELL/wayshell.sh` |
+| `config/SDG-WAYSHELL/wayshell.modules` | `~/.config/SDG-WAYSHELL/wayshell.modules` |
+| `tips/` | `~/.local/tips/SDG-WAYSHELL/` |
+| `docs/` | `~/.local/docs/SDG-WAYSHELL/` |
 
-| Script | Purpose |
-|--------|---------|
-| `install.sh` | Deploy `config/SDG-WAYSHELL/` → `~/.config/sdgos/wayshell/`, deploy `local/SDG-WAYSHELL/wayshell.sh` and modules → `~/.config/sdgos/wayshell/` |
-| `uninstall.sh` | Remove `~/.config/sdgos/wayshell/` |
-| `update.sh` | Overwrite wayshell scripts and configs |
-| `detect.sh` | Check for `jq`, `mmsg`, `waybar` |
+## Path Rewrites
 
-## 2. Path Audit — CRITICAL: Hardcoded `/home/den/`
+### wayshell.sh — internal paths
 
-### 2.1 `config/SDG-WAYSHELL/wayshell.modules` — Mixed /home/den/ and /home/$(whoami)/
-This file has **inconsistent** path formatting. Some paths use `/home/den/` (hardcoded username) while others use `/home/$(whoami)/`:
+| Old | New |
+|-----|-----|
+| `APP_FOLDER=~/.config/sdgos/wayshell` | `APP_FOLDER=~/.config/SDG-WAYSHELL` |
+| `CONFIG_FOLDER=~/.config/sdgos/wayshell` | `CONFIG_FOLDER=~/.config/SDG-WAYSHELL` |
 
-| Line | Current Path | Issue |
-|------|-------------|-------|
-| 15 | `/home/$(whoami)/.config/sdgos/wayshell/configs/brightness.json` | OK (dynamic) |
-| 16 | `/home/$(whoami)/.config/sdgos/wayshell/configs/volume.json` | OK (dynamic) |
-| 21 | `/home/$(whoami)/.config/sdgos/wayshell/configs/screenshot.json` | OK (dynamic) |
-| 28 | `~/.config/sdgos/monocle/monocle.sh hdmi` (on_exec) | OK |
-| 28 | `/home/den/.config/sdgos/monocle/style.css` (off_exec) | **HARDCODED `/home/den/`** |
-| 29 | `/home/den/.config/sdgos/monocle/style.css` (off_exec) | **HARDCODED `/home/den/`** |
-| 30 | `/home/den/.config/sdgos/monocle/style.css` (off_exec) | **HARDCODED `/home/den/`** |
-| 33-40 | Same pattern repeats for deck/vdeck variants | **HARDCODED `/home/den/` every `style.css` reference** |
+### wayshell.modules — critical hardcoded path fixes
 
-**Fix required:** Replace ALL `/home/den/` with `~` or `/home/$(whoami)/` for the style.css paths in kill commands:
+This file has the **worst path inconsistency** in the entire monorepo. 14 references mix 4 different patterns:
+
 ```bash
-pkill -f "waybar -c /home/$USER/.config/sdgos/monocle/config-hdmi -s /home/$USER/.config/sdgos/monocle/style.css"
+# PATTERN 1: $HOME (correct, 2 references)
+$HOME/.config/...
+
+# PATTERN 2: ~ (works in shell, 5 references)
+~/.config/...
+
+# PATTERN 3: /home/den/ (BUG - hardcoded, 1 reference)
+/home/den/.cache/sdgos/wallpapers/marker.sh
+
+# PATTERN 4: /home/$(whoami)/ (works but fragile, 6 references)
+/home/$(whoami)/.config/sdgos/...
 ```
 
-### 2.2 `wayshell.modules` — monocle module path references
-- The monocle module references `~/.config/sdgos/monocle/` paths which are NOT part of any current SDG module. This may be a planned/separate module or an external component.
-- Investigate: should there be an SDG-MONOCLE module, or is this from SDG-WAYSHELL-CONFIGS?
+All must become **consistent** with the new module paths:
 
-## 3. Config Structure
+| Old reference | New target | Correct new path |
+|--------------|------------|------------------|
+| `.../misc/marker.sh` | SDG-MANGO-SWAP | `$HOME/.local/SDG-MANGO-SWAP/marker.sh` |
+| `.../misc/colors.sh` | SDG-UTILS | `$HOME/.local/SDG-UTILS/colors.sh` |
+| `.../fastfetch/fetch.sh` | SDG-FETCH | `$HOME/.local/SDG-FETCH/fetch.sh` |
+| `.../tuis/documentation.sh` | SDG-UTILS | `$HOME/.local/SDG-UTILS/documentation.sh` |
+| `.../config-overview/menu.sh` | SDG-MANGO-CONF | `$HOME/.local/SDG-MANGO-CONF/menu.sh` |
+| `.../tuis/project-select.sh` (or project.select.sh) | SDG-UTILS | `$HOME/.local/SDG-UTILS/project-select.sh` |
+| `.../tuis/bar-presets.sh` | SDG-DMS-BARS | `$HOME/.local/SDG-DMS-BARS/bar-presets.sh` |
+| `.../tuis/layout-switch.sh` | SDG-MANGO-LAYOUTS | `$HOME/.local/SDG-MANGO-LAYOUTS/layout-switch.sh` |
+| `.../fastfetch/fetch-conf.sh` | SDG-FETCH | `$HOME/.local/SDG-FETCH/fetch-conf.sh` |
+| `.../help/help.sh` | SDG-HELP | `$HOME/.local/SDG-HELP/help.sh` |
+| `.../mango-config.sh` | SDG-MANGO-CONF | `$HOME/.local/SDG-MANGO-CONF/mango-config.sh` |
+| `.../help/cmd-help.sh` | SDG-HELP | `$HOME/.local/SDG-HELP/cmd-help.sh` |
+| `.../tuis/pkg-install.sh` | SDG-UTILS | `$HOME/.local/SDG-UTILS/pkg-install.sh` |
+| `.../tuis/aur-install.sh` | SDG-UTILS | `$HOME/.local/SDG-UTILS/aur-install.sh` |
+| `.../misc/swapmarked.sh` | SDG-MANGO-SWAP | `$HOME/.local/SDG-MANGO-SWAP/swapmarked.sh` |
 
-### 3.1 `wayshell.conf` — OK, uses `$HOME` via the wayshell.sh parser.
-- The daemon reads config with `grep -oP 'key=\K[0-9]+' "$CONFIG_FILE"` — no path issues.
+## Missing Module: SDG-MONOCLE
 
-### 3.2 `wayshell.sh` — The daemon itself
-- Line 14-17: Uses `$HOME/.config/sdgos/wayshell` correctly.
-- Line 19: Log file at `/tmp/wayshell_daemon.log` — system temp, OK.
-- Lines 272-274: References `$MODULE_DIR/zone.sh`, `layout.sh`, `focused.sh` — these are in `local/SDG-WAYSHELL/modules/`.
+The module list includes `SDG-MONOCLE` (line 30 in wayshell.modules), but **no SDG-MONOCLE directory exists** in the repo. Possible options:
+1. Create the missing module
+2. Remove the reference from wayshell.modules
+3. Mark as optional with a pre-condition check
 
-### 3.3 Module scripts
-| Module | Reference in wayshell.modules | Source file |
-|--------|-------------------------------|-------------|
-| `zone.sh` | Not directly referenced in modules file | `local/SDG-WAYSHELL/modules/zone.sh` |
-| `layout.sh` | Not directly referenced | `local/SDG-WAYSHELL/modules/layout.sh` |
-| `focused.sh` | Not directly referenced | `local/SDG-WAYSHELL/modules/focused.sh` |
+## Cross-Module References TO SDG-WAYSHELL
 
-These module scripts read their own config from `~/.config/sdgos/wayshell/wayshell.conf` — correct.
+| From | Old Reference | New Reference |
+|------|--------------|---------------|
+| SDG-MANGO-CORE/binds.conf | `.../wayshell/wayshell.sh` | `~/.local/SDG-WAYSHELL/wayshell.sh` |
+| SDG-MANGO-CORE/autostart.conf | `.../wayshell/wayshell.sh` | `~/.local/SDG-WAYSHELL/wayshell.sh` |
 
-## 4. Deploy Path Map
+## Lifecycle Scripts
 
-| Source | Destination |
-|--------|-------------|
-| `config/SDG-WAYSHELL/wayshell.conf` | `~/.config/sdgos/wayshell/wayshell.conf` |
-| `config/SDG-WAYSHELL/wayshell.modules` | `~/.config/sdgos/wayshell/wayshell.modules` |
-| `local/SDG-WAYSHELL/wayshell.sh` | `~/.config/sdgos/wayshell/wayshell.sh` |
-| `local/SDG-WAYSHELL/MATUGEN.toml` | `~/.config/sdgos/wayshell/MATUGEN.toml` |
-| `local/SDG-WAYSHELL/colors.css` | `~/.config/sdgos/wayshell/colors.css` |
-| `local/SDG-WAYSHELL/modules/zone.sh` | `~/.config/sdgos/wayshell/modules/zone.sh` |
-| `local/SDG-WAYSHELL/modules/layout.sh` | `~/.config/sdgos/wayshell/modules/layout.sh` |
-| `local/SDG-WAYSHELL/modules/focused.sh` | `~/.config/sdgos/wayshell/modules/focused.sh` |
+All four root-level scripts are empty. Implement:
 
-## 5. Cross-module References
+- **install.sh**: Copy `config/SDG-WAYSHELL/wayshell.modules` → `~/.config/SDG-WAYSHELL/`, copy `config/SDG-WAYSHELL/wayshell.sh` → `~/.local/SDG-WAYSHELL/wayshell.sh`, copy docs/tips. Symlink: `sudo ln -sf ~/.local/SDG-WAYSHELL/wayshell.sh /usr/bin/wayshell`.
+- **uninstall.sh**: Remove deps, remove symlink.
+- **update.sh**: Re-deploy.
+- **detect.sh**: Check `superctl` (for DMS).
 
-### 5.1 `wayshell.modules` references `~/.config/sdgos/wayshell/configs/`
-This path points to files from **SDG-WAYSHELL-CONFIGS**. After install, SDG-WAYSHELL-CONFIGS deploys to:
-`~/.config/sdgos/wayshell/configs/`
+## Modular Tips
 
-This is correct — the two modules are designed to work together.
+- Create `tips/` with Wayshell module management tips.
 
-### 5.2 `autostart.conf` from SDG-MANGO-CORE
-- `~/.config/sdgos/wayshell/wayshell.sh` is launched as `exec-once` in mangoWM autostart.
+## Modular Docs
 
-## 6. Modular Tips/Help Contribution
+- Create `docs/` documenting the Wayshell module system.
 
-### 6.1 Tips
-- Add tips about wayshell features (edge zones, layout bars, focused process monitoring).
-- Create `tips/` directory.
+## Cleanup
 
-### 6.2 Docs
-- Already has extensive docs at `docs/SDG-WAYSHELL/README.md`, `MODULES-and-CONFIGS.md`, `DEPENDENCIES.md`, `DEPENDENCIES-updated.md`.
-- Could contribute a help topic about configuring wayshell zones and modules.
-
-## 7. Empty Directory Cleanup
-
-| Directory | Status |
-|-----------|--------|
-| `cache/` | Empty — remove |
-| `tips/` | Empty — add tips or remove |
-| `other/` | Empty — remove |
-
-## 8. Conflict Cleanup
-- No conflict artifacts found, but note the `DEPENDENCIES.md` vs `DEPENDENCIES-updated.md` pattern (similar to the "-updated" pattern in SDG-UTIL-SCRIPTS). Merge and remove the `-updated` version.
+- Remove empty `cache/`, `other/`, `tips/`
