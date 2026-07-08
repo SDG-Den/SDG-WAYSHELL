@@ -1,287 +1,192 @@
 #!/bin/bash
-#===============================================================================
-# Wayshell Daemon — Module Event Manager
-#===============================================================================
-# Description:
-#   Reads module configuration, spawns zone/layout/focused event sources,
-#   and dispatches ON/OFF actions with configurable trailing-edge debounce.
-#
-# Dependencies: jq, mmsg
-# Config: wayshell.conf (zone_buffer, on_delay, off_delay)
-# Modules: wayshell.modules (name,on_exec,off_exec,type,args...)
-#===============================================================================
 
-CONFIG_DIR="${HOME}/.config/sdgos/wayshell"
-CONFIG_FILE="${CONFIG_DIR}/wayshell.conf"
-MODULES_FILE="${CONFIG_DIR}/wayshell.modules"
-MODULE_DIR="${CONFIG_DIR}/modules"
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/SDG-WAYSHELL"
+LOCAL_DIR="${XDG_DATA_HOME:-$HOME/.local}/SDG-WAYSHELL"
+CONF="$CONFIG_DIR/wayshell.conf"
+MODULES="$CONFIG_DIR/wayshell.modules"
 
-exec 1>>/tmp/wayshell_daemon.log 2>&1
-echo "=== Starting Wayshell Daemon ==="
+declare -A ON_DELAY OFF_DELAY
+declare -A MOD_ON MOD_OFF MOD_TYPE MOD_ARGS
+declare -A STATE TIMER_ON TIMER_OFF
+ZONE_BUFFER=10
+CHECK_INTERVAL=0.05
 
-CLEANED_UP=false
-cleanup() {
-    $CLEANED_UP && return
-    CLEANED_UP=true
-    echo "Shutting down Wayshell Daemon..."
-    kill -- -$$ 2>/dev/null
-    exit 0
-}
-trap cleanup SIGTERM SIGINT EXIT
-
-# --- Config ---
-ON_DELAY=$(grep -oP 'on_delay=\K[0-9]+' "$CONFIG_FILE" 2>/dev/null || echo "100")
-OFF_DELAY=$(grep -oP 'off_delay=\K[0-9]+' "$CONFIG_FILE" 2>/dev/null || echo "100")
-
-ZONE_ON_DELAY=$(grep -oP 'zone_on_delay=\K[0-9]+' "$CONFIG_FILE" 2>/dev/null || echo "$ON_DELAY")
-ZONE_OFF_DELAY=$(grep -oP 'zone_off_delay=\K[0-9]+' "$CONFIG_FILE" 2>/dev/null || echo "$OFF_DELAY")
-LAYOUT_ON_DELAY=$(grep -oP 'layout_on_delay=\K[0-9]+' "$CONFIG_FILE" 2>/dev/null || echo "$ON_DELAY")
-LAYOUT_OFF_DELAY=$(grep -oP 'layout_off_delay=\K[0-9]+' "$CONFIG_FILE" 2>/dev/null || echo "$OFF_DELAY")
-FOCUSED_ON_DELAY=$(grep -oP 'focused_on_delay=\K[0-9]+' "$CONFIG_FILE" 2>/dev/null || echo "$ON_DELAY")
-FOCUSED_OFF_DELAY=$(grep -oP 'focused_off_delay=\K[0-9]+' "$CONFIG_FILE" 2>/dev/null || echo "$OFF_DELAY")
-echo "Config: on_delay=$ON_DELAY, off_delay=$OFF_DELAY zone_on=$ZONE_ON_DELAY zone_off=$ZONE_OFF_DELAY layout_on=$LAYOUT_ON_DELAY layout_off=$LAYOUT_OFF_DELAY focused_on=$FOCUSED_ON_DELAY focused_off=$FOCUSED_OFF_DELAY"
-
-# --- Storage ---
-declare -A MODULES
-declare -A MODULE_STATES
-declare -A MODULE_ENTER_TS
-declare -A MODULE_EXIT_TS
-
-# --- Module parsing ---
-parse_modules() {
-    echo "Parsing modules from $MODULES_FILE"
-    [[ -f "$MODULES_FILE" ]] || { echo "ERROR: Modules file not found"; exit 1; }
-    local count=0
-    while IFS='|' read -r name onexec offexec type args; do
-        name="${name// /}"
-        [[ "$name" =~ ^#.*$ || -z "$name" ]] && continue
-        MODULES["$name"]="$onexec|$offexec|$type|$args"
-        MODULE_STATES["$name"]="disabled"
-        ((count++))
-        echo "  [$count] $name ($type)"
-    done < "$MODULES_FILE"
-    echo "Total modules loaded: $count"
-}
-parse_modules
-
-# --- Filter ---
-modules_by_type() {
-    local t="$1"
-    for n in "${!MODULES[@]}"; do
-        IFS='|' read -r _ _ mt _ <<< "${MODULES[$n]}"
-        [[ "$mt" == "$t" ]] && echo "$n"
-    done
+load_conf() {
+  [[ -f "$CONF" ]] && source "$CONF"
+  ZONE_BUFFER=${zone_buffer:-10}
+  ON_DELAY[zone]=${zone_on_delay:-${on_delay:-100}}
+  OFF_DELAY[zone]=${zone_off_delay:-${off_delay:-100}}
+  ON_DELAY[layout]=${layout_on_delay:-${on_delay:-100}}
+  OFF_DELAY[layout]=${layout_off_delay:-${off_delay:-100}}
+  ON_DELAY[focused]=${focused_on_delay:-${on_delay:-100}}
+  OFF_DELAY[focused]=${focused_off_delay:-${off_delay:-100}}
 }
 
-# --- Monitor offset cache ---
-declare -A MONITOR_OFFSETS
-MONITOR_CACHE_TS=0
-get_monitor_offset() {
-    local mon="$1"; local now; now=$(date +%s)
-    if (( now - MONITOR_CACHE_TS > 5 )); then
-        local json entry name ox oy
-        json=$(mmsg get all-monitors 2>/dev/null)
-        if [[ -n "$json" ]]; then
-            while IFS= read -r entry; do
-                name=$(jq -r '.name' <<< "$entry" 2>/dev/null)
-                ox=$(jq -r '.x' <<< "$entry" 2>/dev/null); oy=$(jq -r '.y' <<< "$entry" 2>/dev/null)
-                [[ -n "$name" && "$ox" != "null" ]] && MONITOR_OFFSETS["$name"]="$ox,$oy"
-            done < <(jq -c '.monitors[]' <<< "$json" 2>/dev/null)
-        fi
-        MONITOR_CACHE_TS=$now
+load_modules() {
+  local line name on off type args
+  while IFS='|' read -r name on off type args; do
+    [[ "$name" =~ ^#|^$ ]] && continue
+    MOD_ON[$name]="$on"
+    MOD_OFF[$name]="$off"
+    MOD_TYPE[$name]="$type"
+    MOD_ARGS[$name]="$args"
+    STATE[$name]=disabled
+  done < "$MODULES"
+}
+
+now_ms() {
+  date +%s%3N
+}
+
+process_zone() {
+  local payload="$1" x y state name x1 y1 x2 y2
+  x=$(jq -r '.x // empty' <<< "$payload")
+  y=$(jq -r '.y // empty' <<< "$payload")
+  state=$(jq -r '.state // "enter"' <<< "$payload")
+  for name in "${!MOD_TYPE[@]}"; do
+    [[ "${MOD_TYPE[$name]}" != zone ]] && continue
+    IFS=',' read -r x1 y1 x2 y2 <<< "${MOD_ARGS[$name]}"
+    if [[ "$state" == enter ]]; then
+      if (( x >= x1 - ZONE_BUFFER && x <= x2 + ZONE_BUFFER && y >= y1 - ZONE_BUFFER && y <= y2 + ZONE_BUFFER )); then
+        transition "$name" entering
+      fi
+    else
+      if ! (( x >= x1 - ZONE_BUFFER && x <= x2 + ZONE_BUFFER && y >= y1 - ZONE_BUFFER && y <= y2 + ZONE_BUFFER )); then
+        transition "$name" exiting
+      fi
     fi
-    echo "${MONITOR_OFFSETS[$mon]:-0,0}"
+  done
 }
 
-# --- Check debounce timers and fire actions ---
-# Called every ~50ms from the main event loop.
+process_layout() {
+  local payload="$1" layout state monitor name layout_req mon_req
+  layout=$(jq -r '.layout // empty' <<< "$payload")
+  state=$(jq -r '.state // empty' <<< "$payload")
+  monitor=$(jq -r '.monitor // empty' <<< "$payload")
+  for name in "${!MOD_TYPE[@]}"; do
+    [[ "${MOD_TYPE[$name]}" != layout ]] && continue
+    IFS=',' read -r layout_req mon_req <<< "${MOD_ARGS[$name]}"
+    [[ "$layout" == "$layout_req" ]] || continue
+    [[ -n "$mon_req" && "$monitor" != "$mon_req" ]] && continue
+    if [[ "$state" == active ]]; then
+      transition "$name" entering
+    elif [[ "$state" == inactive ]]; then
+      transition "$name" exiting
+    fi
+  done
+}
+
+process_focused() {
+  local payload="$1" app_id state name
+  app_id=$(jq -r '.app_id // empty' <<< "$payload")
+  state=$(jq -r '.state // empty' <<< "$payload")
+  for name in "${!MOD_TYPE[@]}"; do
+    [[ "${MOD_TYPE[$name]}" != focused ]] && continue
+    if [[ "$state" == focused && "$app_id" == "${MOD_ARGS[$name]}" ]]; then
+      transition "$name" entering
+    elif [[ "$state" == unfocused && "$app_id" == "${MOD_ARGS[$name]}" ]]; then
+      transition "$name" exiting
+    fi
+  done
+}
+
+transition() {
+  local name="$1" dir="$2" now
+  now=$(now_ms)
+  case "$dir" in
+    entering)
+      case "${STATE[$name]}" in
+        disabled)
+          STATE[$name]=pending_on
+          TIMER_ON[$name]=$((now + ON_DELAY[${MOD_TYPE[$name]}]))
+          unset TIMER_OFF[$name]
+          ;;
+        pending_off)
+          STATE[$name]=enabled
+          unset TIMER_OFF[$name]
+          ;;
+      esac
+      ;;
+    exiting)
+      case "${STATE[$name]}" in
+        enabled)
+          STATE[$name]=pending_off
+          TIMER_OFF[$name]=$((now + OFF_DELAY[${MOD_TYPE[$name]}]))
+          ;;
+        pending_on)
+          STATE[$name]=disabled
+          unset TIMER_ON[$name]
+          ;;
+      esac
+      ;;
+  esac
+}
+
 check_fires() {
-    local now name onexec offexec mtype on_delay off_delay
-    now=$(date +%s%3N)
-
-    # Pending ON fires
-    for name in "${!MODULE_ENTER_TS[@]}"; do
-        local st=${MODULE_STATES[$name]}
-        [[ "$st" != "pending_on" && "$st" != "pending_off" ]] && continue
-        IFS='|' read -r _ _ mtype _ <<< "${MODULES[$name]}"
-        case "$mtype" in
-            zone)    on_delay=$ZONE_ON_DELAY ;;
-            layout)  on_delay=$LAYOUT_ON_DELAY ;;
-            focused) on_delay=$FOCUSED_ON_DELAY ;;
-            *)       on_delay=$ON_DELAY ;;
-        esac
-        if (( now - MODULE_ENTER_TS[$name] >= on_delay )); then
-            if [[ "$st" == "pending_on" ]]; then
-                MODULE_STATES["$name"]="enabled"
-                IFS='|' read -r onexec _ _ _ <<< "${MODULES[$name]}"
-                echo "ON  $name"
-                eval "$onexec" &
-            fi
-            unset "MODULE_ENTER_TS[$name]"
+  local now name
+  now=$(now_ms)
+  for name in "${!STATE[@]}"; do
+    case "${STATE[$name]}" in
+      pending_on)
+        if (( now >= TIMER_ON[$name] )); then
+          STATE[$name]=enabled
+          eval "${MOD_ON[$name]}" &
         fi
-    done
-
-    # Pending OFF fires
-    for name in "${!MODULE_EXIT_TS[@]}"; do
-        local st=${MODULE_STATES[$name]}
-        [[ "$st" != "pending_off" && "$st" != "enabled" ]] && continue
-        IFS='|' read -r _ _ mtype _ <<< "${MODULES[$name]}"
-        case "$mtype" in
-            zone)    off_delay=$ZONE_OFF_DELAY ;;
-            layout)  off_delay=$LAYOUT_OFF_DELAY ;;
-            focused) off_delay=$FOCUSED_OFF_DELAY ;;
-            *)       off_delay=$OFF_DELAY ;;
-        esac
-        if (( now - MODULE_EXIT_TS[$name] >= off_delay )); then
-            MODULE_STATES["$name"]="disabled"
-            IFS='|' read -r _ offexec _ _ <<< "${MODULES[$name]}"
-            echo "OFF $name"
-            eval "$offexec" &
-            unset "MODULE_EXIT_TS[$name]"
+        ;;
+      pending_off)
+        if (( now >= TIMER_OFF[$name] )); then
+          STATE[$name]=disabled
+          eval "${MOD_OFF[$name]}" &
         fi
-    done
+        ;;
+    esac
+  done
 }
 
-# --- Process zone events ---
-process_zone_event() {
-    local data="$1"
-
-    # Exit event — cursor left the edge zone entirely
-    local state
-    state=$(jq -r '.state // "enter"' <<< "$data" 2>/dev/null)
-    if [[ "$state" == "exit" ]]; then
-        local now; now=$(date +%s%3N)
-        while IFS= read -r module_name; do
-            [[ -z "$module_name" ]] && continue
-            local st=${MODULE_STATES[$module_name]}
-            if [[ "$st" == "enabled" || "$st" == "pending_on" ]]; then
-                MODULE_EXIT_TS[$module_name]=$now
-                MODULE_STATES["$module_name"]="pending_off"
-                unset "MODULE_ENTER_TS[$module_name]"
-            fi
-        done < <(modules_by_type "zone")
-        return
-    fi
-
-    # Enter event — check bounding boxes
-    local x y monitor
-    x=$(jq -r '.x' <<< "$data" 2>/dev/null)
-    y=$(jq -r '.y' <<< "$data" 2>/dev/null)
-    monitor=$(jq -r '.monitor' <<< "$data" 2>/dev/null)
-    [[ -z "$x" || -z "$y" || -z "$monitor" ]] && return
-
-    local x_int=${x%.*}
-    local y_int=${y%.*}
-    local offset mx my
-    offset=$(get_monitor_offset "$monitor")
-    mx="${offset%,*}"; my="${offset#*,}"
-
-    local now; now=$(date +%s%3N)
-
-    while IFS= read -r module_name; do
-        [[ -z "$module_name" ]] && continue
-        IFS='|' read -r onexec offexec _ args <<< "${MODULES[$module_name]}"
-        IFS=',' read -r x1 y1 x2 y2 <<< "$args"
-        local ax1=$(( x1 + mx )) ay1=$(( y1 + my ))
-        local ax2=$(( x2 + mx )) ay2=$(( y2 + my ))
-        local in=$(( x_int >= ax1 && x_int <= ax2 && y_int >= ay1 && y_int <= ay2 ? 1 : 0 ))
-        local st=${MODULE_STATES[$module_name]}
-
-        if (( in )); then
-            if [[ "$st" == "disabled" ]]; then
-                MODULE_ENTER_TS[$module_name]=$now
-                MODULE_STATES["$module_name"]="pending_on"
-            elif [[ "$st" == "pending_off" ]]; then
-                # Re-entered before off delay — cancel OFF, stay enabled
-                unset "MODULE_EXIT_TS[$module_name]"
-                MODULE_STATES["$module_name"]="enabled"
-            fi
-        else
-            if [[ "$st" == "enabled" || "$st" == "pending_on" ]]; then
-                MODULE_EXIT_TS[$module_name]=$now
-                MODULE_STATES["$module_name"]="pending_off"
-                unset "MODULE_ENTER_TS[$module_name]"
-            fi
-        fi
-    done < <(modules_by_type "zone")
+process_event() {
+  local source="$1" payload="$2"
+  case "$source" in
+    zone) process_zone "$payload" ;;
+    layout) process_layout "$payload" ;;
+    focused) process_focused "$payload" ;;
+  esac
 }
 
-# --- Layout event processing ---
-process_layout_event() {
-    local event="$1"; local layout state event_monitor
-    layout=$(jq -r '.layout' <<< "$event" 2>/dev/null)
-    state=$(jq -r '.state' <<< "$event" 2>/dev/null)
-    event_monitor=$(jq -r '.monitor // empty' <<< "$event" 2>/dev/null)
-    [[ -z "$layout" || -z "$state" ]] && return
-    local now; now=$(date +%s%3N)
-    while IFS= read -r module_name; do
-        [[ -z "$module_name" ]] && continue
-        IFS='|' read -r onexec offexec _ args <<< "${MODULES[$module_name]}"
-        # args = "layout_name" or "layout_name,monitor_name"
-        local expected_layout="${args%%,*}"
-        local expected_monitor=""
-        [[ "$args" == *","* ]] && expected_monitor="${args#*,}"
-        [[ "$layout" != "$expected_layout" ]] && continue
-        [[ -n "$expected_monitor" && "$event_monitor" != "$expected_monitor" ]] && continue
-        local st=${MODULE_STATES[$module_name]}
-        if [[ "$state" == "active" && "$st" == "disabled" ]]; then
-            MODULE_ENTER_TS[$module_name]=$now
-            MODULE_STATES["$module_name"]="pending_on"
-        elif [[ "$state" == "inactive" && ( "$st" == "enabled" || "$st" == "pending_on" ) ]]; then
-            MODULE_EXIT_TS[$module_name]=$now
-            MODULE_STATES["$module_name"]="pending_off"
-            unset "MODULE_ENTER_TS[$module_name]"
-        fi
-    done < <(modules_by_type "layout")
+cleanup() {
+  local name
+  for name in "${!STATE[@]}"; do
+    [[ "${STATE[$name]}" == enabled || "${STATE[$name]}" == pending_on ]] && eval "${MOD_OFF[$name]}" &
+  done
+  wait
+  rm -f /tmp/wayshell-fifo-$$
+  exit 0
 }
 
-# --- Focused event processing ---
-process_focused_event() {
-    local event="$1"; local app_id state
-    app_id=$(jq -r '.app_id' <<< "$event" 2>/dev/null)
-    state=$(jq -r '.state' <<< "$event" 2>/dev/null)
-    [[ -z "$app_id" || -z "$state" ]] && return
-    local now; now=$(date +%s%3N)
-    while IFS= read -r module_name; do
-        [[ -z "$module_name" ]] && continue
-        IFS='|' read -r onexec offexec _ expected <<< "${MODULES[$module_name]}"
-        [[ "$app_id" != "$expected" ]] && continue
-        local st=${MODULE_STATES[$module_name]}
-        if [[ "$state" == "focused" && "$st" == "disabled" ]]; then
-            MODULE_ENTER_TS[$module_name]=$now
-            MODULE_STATES["$module_name"]="pending_on"
-        elif [[ "$state" == "unfocused" && ( "$st" == "enabled" || "$st" == "pending_on" ) ]]; then
-            MODULE_EXIT_TS[$module_name]=$now
-            MODULE_STATES["$module_name"]="pending_off"
-            unset "MODULE_ENTER_TS[$module_name]"
-        fi
-    done < <(modules_by_type "focused")
-}
+trap cleanup EXIT INT TERM
 
-# --- Start module subprocesses (auto-restarting) ---
-echo "Starting modules..."
+load_conf
+load_modules
 
-(
-    start_src() {
-        local script="$1" label="$2"
-        [[ -x "$script" ]] || { echo "WARNING: $script not found — $label disabled" >&2; return; }
-        (
-            while true; do "$script"; sleep 0.5; done
-        ) | while IFS= read -r line; do echo "${label}:$line"; done &
-    }
-    start_src "$MODULE_DIR/zone.sh"    "zone"
-    start_src "$MODULE_DIR/layout.sh"  "layout"
-    start_src "$MODULE_DIR/focused.sh" "focused"
-    wait
-) | while true; do
-    if IFS= read -t 0.05 -r line; then
-        source="${line%%:*}"
-        data="${line#*:}"
-        case "$source" in
-            zone)    process_zone_event    "$data" ;;
-            layout)  process_layout_event  "$data" ;;
-            focused) process_focused_event "$data" ;;
-        esac
-    fi
-    check_fires
+FIFO=/tmp/wayshell-fifo-$$
+mkfifo "$FIFO"
+
+for src in "$LOCAL_DIR/modules"/*.sh; do
+  [[ -x "$src" ]] || continue
+  name=$(basename "$src" .sh)
+  (
+    exec "$src"
+  ) | while IFS= read -r line; do
+    echo "${name}:${line}"
+  done > "$FIFO" &
+done
+
+exec 3< "$FIFO"
+
+while true; do
+  if read -t "$CHECK_INTERVAL" -r line <&3; then
+    source="${line%%:*}"
+    payload="${line#*:}"
+    process_event "$source" "$payload"
+  fi
+  check_fires
 done
