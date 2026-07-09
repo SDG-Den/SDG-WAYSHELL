@@ -1,12 +1,12 @@
 #!/bin/bash
 
-rm -rf /home/$(whoami)/.local/SDG-WAYSHELL
-cp -r /home/$(whoami)/.cache/SDG-PKG/sdg-wayshell/local/* /home/$(whoami)/.local
-sudo ln -sf /home/$(whoami)/.local/SDG-WAYSHELL/wayshell.sh /usr/bin/wayshell
+rm -rf $HOME/.local/SDG-WAYSHELL
+cp -r $HOME/.cache/SDG-PKG/sdg-wayshell/local/* $HOME/.local
+sudo ln -sf $HOME/.local/SDG-WAYSHELL/wayshell.sh /usr/bin/wayshell
 
-rm -rf /home/$(whoami)/.local/docs/SDG-WAYSHELL
-rm -rf /home/$(whoami)/.local/tips/SDG-WAYSHELL
-mkdir -p /home/$(whoami)/.local/docs
-mkdir -p /home/$(whoami)/.local/tips
-cp -r /home/$(whoami)/.cache/SDG-PKG/sdg-wayshell/docs/* /home/$(whoami)/.local/docs
-cp -r /home/$(whoami)/.cache/SDG-PKG/sdg-wayshell/tips/* /home/$(whoami)/.local/tips
+rm -rf $HOME/.local/docs/SDG-WAYSHELL
+rm -rf $HOME/.local/tips/SDG-WAYSHELL
+mkdir -p $HOME/.local/docs
+mkdir -p $HOME/.local/tips
+cp -r $HOME/.cache/SDG-PKG/sdg-wayshell/docs/* $HOME/.local/docs
+cp -r $HOME/.cache/SDG-PKG/sdg-wayshell/tips/* $HOME/.local/tips

@@ -42,18 +42,23 @@ process_zone() {
   local payload="$1" x y state name x1 y1 x2 y2
   x=$(jq -r '.x // empty' <<< "$payload")
   y=$(jq -r '.y // empty' <<< "$payload")
-  state=$(jq -r '.state // "enter"' <<< "$payload")
+  state=$(jq -r '.state // empty' <<< "$payload")
+
+  if [[ "$state" == "exit" ]]; then
+    for name in "${!MOD_TYPE[@]}"; do
+      [[ "${MOD_TYPE[$name]}" != zone ]] && continue
+      [[ "${STATE[$name]}" == enabled || "${STATE[$name]}" == pending_on ]] && transition "$name" exiting
+    done
+    return
+  fi
+
   for name in "${!MOD_TYPE[@]}"; do
     [[ "${MOD_TYPE[$name]}" != zone ]] && continue
     IFS=',' read -r x1 y1 x2 y2 <<< "${MOD_ARGS[$name]}"
-    if [[ "$state" == enter ]]; then
-      if (( x >= x1 - ZONE_BUFFER && x <= x2 + ZONE_BUFFER && y >= y1 - ZONE_BUFFER && y <= y2 + ZONE_BUFFER )); then
-        transition "$name" entering
-      fi
+    if (( x >= x1 - ZONE_BUFFER && x <= x2 + ZONE_BUFFER && y >= y1 - ZONE_BUFFER && y <= y2 + ZONE_BUFFER )); then
+      transition "$name" entering
     else
-      if ! (( x >= x1 - ZONE_BUFFER && x <= x2 + ZONE_BUFFER && y >= y1 - ZONE_BUFFER && y <= y2 + ZONE_BUFFER )); then
-        transition "$name" exiting
-      fi
+      [[ "${STATE[$name]}" == enabled || "${STATE[$name]}" == pending_on ]] && transition "$name" exiting
     fi
   done
 }

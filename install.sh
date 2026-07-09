@@ -6,26 +6,27 @@ unipkg install any jq
 unipkg install any procps-ng
 
 # set working directory
-WORKDIR=/home/$(whoami)/.cache/SDG-PKG/sdg-wayshell
+WORKDIR=$HOME/.cache/SDG-PKG/sdg-wayshell
 
 # install default configs
-cp -r $WORKDIR/config/* /home/$(whoami)/.config
+cp -r $WORKDIR/config/* $HOME/.config
 
 # install binaries
-cp -r $WORKDIR/local/* /home/$(whoami)/.local
+cp -r $WORKDIR/local/* $HOME/.local
 
 # install docs and tips
-mkdir -p /home/$(whoami)/.local/docs
-mkdir -p /home/$(whoami)/.local/tips
-cp -r $WORKDIR/docs/* /home/$(whoami)/.local/docs
-cp -r $WORKDIR/tips/* /home/$(whoami)/.local/tips
+mkdir -p $HOME/.local/docs
+mkdir -p $HOME/.local/tips
+cp -r $WORKDIR/docs/* $HOME/.local/docs
+cp -r $WORKDIR/tips/* $HOME/.local/tips
 
 # make entrypoint executable
-chmod a+x /home/$(whoami)/.local/SDG-WAYSHELL/wayshell.sh
-chmod a+x /home/$(whoami)/.local/SDG-WAYSHELL/modules/*.sh
+chmod a+x $HOME/.local/SDG-WAYSHELL/wayshell.sh
+chmod a+x $HOME/.local/SDG-WAYSHELL/modules/*.sh
 
 # symlink entrypoint
-sudo ln -sf /home/$(whoami)/.local/SDG-WAYSHELL/wayshell.sh /usr/bin/wayshell
+sudo ln -sf $HOME/.local/SDG-WAYSHELL/wayshell.sh /usr/bin/wayshell
 
 # verify binary
 which wayshell || echo "INSTALL FAILED!"
+
