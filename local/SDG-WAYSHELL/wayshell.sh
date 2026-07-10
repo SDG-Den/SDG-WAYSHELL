@@ -8,6 +8,8 @@ MODULES="$CONFIG_DIR/wayshell.modules"
 declare -A ON_DELAY OFF_DELAY
 declare -A MOD_ON MOD_OFF MOD_TYPE MOD_ARGS
 declare -A STATE TIMER_ON TIMER_OFF
+declare -A MONITOR_OFFSETS
+MONITOR_CACHE_TS=0
 ZONE_BUFFER=10
 CHECK_INTERVAL=0.05
 
@@ -38,11 +40,31 @@ now_ms() {
   date +%s%3N
 }
 
+get_monitor_offset() {
+  local mon="$1" now
+  now=$(date +%s)
+  if (( now - MONITOR_CACHE_TS > 5 )); then
+    local json entry name ox oy
+    json=$(mmsg get all-monitors 2>/dev/null)
+    if [[ -n "$json" ]]; then
+      while IFS= read -r entry; do
+        name=$(jq -r '.name' <<< "$entry" 2>/dev/null)
+        ox=$(jq -r '.x' <<< "$entry" 2>/dev/null)
+        oy=$(jq -r '.y' <<< "$entry" 2>/dev/null)
+        [[ -n "$name" && "$ox" != "null" ]] && MONITOR_OFFSETS["$name"]="$ox,$oy"
+      done < <(jq -c '.monitors[]' <<< "$json" 2>/dev/null)
+    fi
+    MONITOR_CACHE_TS=$now
+  fi
+  echo "${MONITOR_OFFSETS[$mon]:-0,0}"
+}
+
 process_zone() {
-  local payload="$1" x y state name x1 y1 x2 y2
+  local payload="$1" x y state name x1 y1 x2 y2 monitor offset mx my x_int y_int
   x=$(jq -r '.x // empty' <<< "$payload")
   y=$(jq -r '.y // empty' <<< "$payload")
   state=$(jq -r '.state // empty' <<< "$payload")
+  monitor=$(jq -r '.monitor // empty' <<< "$payload")
 
   if [[ "$state" == "exit" ]]; then
     for name in "${!MOD_TYPE[@]}"; do
@@ -52,10 +74,16 @@ process_zone() {
     return
   fi
 
+  [[ -z "$x" || -z "$y" || -z "$monitor" ]] && return
+  x_int=${x%.*}
+  y_int=${y%.*}
+  offset=$(get_monitor_offset "$monitor")
+  mx="${offset%,*}"; my="${offset#*,}"
+
   for name in "${!MOD_TYPE[@]}"; do
     [[ "${MOD_TYPE[$name]}" != zone ]] && continue
     IFS=',' read -r x1 y1 x2 y2 <<< "${MOD_ARGS[$name]}"
-    if (( x >= x1 - ZONE_BUFFER && x <= x2 + ZONE_BUFFER && y >= y1 - ZONE_BUFFER && y <= y2 + ZONE_BUFFER )); then
+    if (( x_int >= x1 + mx && x_int <= x2 + mx && y_int >= y1 + my && y_int <= y2 + my )); then
       transition "$name" entering
     else
       [[ "${STATE[$name]}" == enabled || "${STATE[$name]}" == pending_on ]] && transition "$name" exiting
