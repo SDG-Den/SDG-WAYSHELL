@@ -25,19 +25,19 @@ zone_topcenter|mmsg dispatch spawn_shell,waybar -c $HOME/.config/SDG-WAYSHELL-CO
 #   monocle_dp1|...|...|layout|M,DP-1
 
 # monocle bar
-monocle|mmsg dispatch spawn_shell,$HOME/.config/SDG-MONOCLE/monocle.sh hdmi|pkill -f "waybar -c $HOME/.config/SDG-MONOCLE/config-hdmi -s $HOME/.config/SDG-MONOCLE/style.css"|layout|M,HDMI-A-1
-monocle-dp1|mmsg dispatch spawn_shell,$HOME/.config/SDG-MONOCLE/monocle.sh dp1|pkill -f "waybar -c $HOME/.config/SDG-MONOCLE/config-dp1 -s $HOME/.config/SDG-MONOCLE/style.css"|layout|M,DP-1
-monocle-dp3|mmsg dispatch spawn_shell,$HOME/.config/SDG-MONOCLE/monocle.sh dp3|pkill -f "waybar -c $HOME/.config/SDG-MONOCLE/config-dp3 -s $HOME/.config/SDG-MONOCLE/style.css"|layout|M,DP-3
+monocle|mmsg dispatch spawn_shell,$HOME/.local/SDG-MONOCLE/monocle.sh hdmi|pkill -f "waybar -c $HOME/.config/SDG-MONOCLE/config-hdmi -s $HOME/.config/SDG-MONOCLE/style.css"|layout|M,HDMI-A-1
+monocle-dp1|mmsg dispatch spawn_shell,$HOME/.local/SDG-MONOCLE/monocle.sh dp1|pkill -f "waybar -c $HOME/.config/SDG-MONOCLE/config-dp1 -s $HOME/.config/SDG-MONOCLE/style.css"|layout|M,DP-1
+monocle-dp3|mmsg dispatch spawn_shell,$HOME/.local/SDG-MONOCLE/monocle.sh dp3|pkill -f "waybar -c $HOME/.config/SDG-MONOCLE/config-dp3 -s $HOME/.config/SDG-MONOCLE/style.css"|layout|M,DP-3
 
 # monocle bar on deck
-deck-hdmi|mmsg dispatch spawn_shell,$HOME/.config/SDG-MONOCLE/monocle.sh hdmi|pkill -f "waybar -c $HOME/.config/SDG-MONOCLE/config-hdmi -s $HOME/.config/SDG-MONOCLE/style.css"|layout|K,HDMI-A-1
-deck-dp1|mmsg dispatch spawn_shell,$HOME/.config/SDG-MONOCLE/monocle.sh dp1|pkill -f "waybar -c $HOME/.config/SDG-MONOCLE/config-dp1 -s $HOME/.config/SDG-MONOCLE/style.css"|layout|K,DP-1
-deck-dp3|mmsg dispatch spawn_shell,$HOME/.config/SDG-MONOCLE/monocle.sh dp3|pkill -f "waybar -c $HOME/.config/SDG-MONOCLE/config-dp3 -s $HOME/.config/SDG-MONOCLE/style.css"|layout|K,DP-3
+deck-hdmi|mmsg dispatch spawn_shell,$HOME/.local/SDG-MONOCLE/monocle.sh hdmi|pkill -f "waybar -c $HOME/.config/SDG-MONOCLE/config-hdmi -s $HOME/.config/SDG-MONOCLE/style.css"|layout|K,HDMI-A-1
+deck-dp1|mmsg dispatch spawn_shell,$HOME/.local/SDG-MONOCLE/monocle.sh dp1|pkill -f "waybar -c $HOME/.config/SDG-MONOCLE/config-dp1 -s $HOME/.config/SDG-MONOCLE/style.css"|layout|K,DP-1
+deck-dp3|mmsg dispatch spawn_shell,$HOME/.local/SDG-MONOCLE/monocle.sh dp3|pkill -f "waybar -c $HOME/.config/SDG-MONOCLE/config-dp3 -s $HOME/.config/SDG-MONOCLE/style.css"|layout|K,DP-3
 
 # monocle bar on vertical deck
-vdeck-hdmi|mmsg dispatch spawn_shell,$HOME/.config/SDG-MONOCLE/monocle.sh hdmi|pkill -f "waybar -c $HOME/.config/SDG-MONOCLE/config-hdmi -s $HOME/.config/SDG-MONOCLE/style.css"|layout|VK,HDMI-A-1
-vdeck-dp1|mmsg dispatch spawn_shell,$HOME/.config/SDG-MONOCLE/monocle.sh dp1|pkill -f "waybar -c $HOME/.config/SDG-MONOCLE/config-dp1 -s $HOME/.config/SDG-MONOCLE/style.css"|layout|VK,DP-1
-vdeck-dp3|mmsg dispatch spawn_shell,$HOME/.config/SDG-MONOCLE/monocle.sh dp3|pkill -f "waybar -c $HOME/.config/SDG-MONOCLE/config-dp3 -s $HOME/.config/SDG-MONOCLE/style.css"|layout|VK,DP-3
+vdeck-hdmi|mmsg dispatch spawn_shell,$HOME/.local/SDG-MONOCLE/monocle.sh hdmi|pkill -f "waybar -c $HOME/.config/SDG-MONOCLE/config-hdmi -s $HOME/.config/SDG-MONOCLE/style.css"|layout|VK,HDMI-A-1
+vdeck-dp1|mmsg dispatch spawn_shell,$HOME/.local/SDG-MONOCLE/monocle.sh dp1|pkill -f "waybar -c $HOME/.config/SDG-MONOCLE/config-dp1 -s $HOME/.config/SDG-MONOCLE/style.css"|layout|VK,DP-1
+vdeck-dp3|mmsg dispatch spawn_shell,$HOME/.local/SDG-MONOCLE/monocle.sh dp3|pkill -f "waybar -c $HOME/.config/SDG-MONOCLE/config-dp3 -s $HOME/.config/SDG-MONOCLE/style.css"|layout|VK,DP-3
 
 # Focused modules — trigger when specific app gains/loses focus
 #term_focused|notify-send "terminal focused"|notify-send "terminal unfocused"|focused|com.mitchellh.ghostty
