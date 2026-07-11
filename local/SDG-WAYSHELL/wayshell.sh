@@ -9,6 +9,7 @@ declare -A ON_DELAY OFF_DELAY
 declare -A MOD_ON MOD_OFF MOD_TYPE MOD_ARGS
 declare -A STATE TIMER_ON TIMER_OFF
 declare -A MONITOR_OFFSETS
+declare -a MOD_PIDS
 MONITOR_CACHE_TS=0
 ZONE_BUFFER=10
 CHECK_INTERVAL=0.05
@@ -98,7 +99,9 @@ process_layout() {
   monitor=$(jq -r '.monitor // empty' <<< "$payload")
   for name in "${!MOD_TYPE[@]}"; do
     [[ "${MOD_TYPE[$name]}" != layout ]] && continue
+    [[ -z "${MOD_ARGS[$name]}" ]] && continue
     IFS=',' read -r layout_req mon_req <<< "${MOD_ARGS[$name]}"
+    [[ -z "$layout_req" ]] && continue
     [[ "$layout" == "$layout_req" ]] || continue
     [[ -n "$mon_req" && "$monitor" != "$mon_req" ]] && continue
     if [[ "$state" == active ]]; then
@@ -186,9 +189,12 @@ process_event() {
 }
 
 cleanup() {
-  local name
+  local name pid
   for name in "${!STATE[@]}"; do
     [[ "${STATE[$name]}" == enabled || "${STATE[$name]}" == pending_on ]] && eval "${MOD_OFF[$name]}" &
+  done
+  for pid in "${MOD_PIDS[@]}"; do
+    kill "$pid" 2>/dev/null || true
   done
   wait
   rm -f /tmp/wayshell-fifo-$$
@@ -207,10 +213,14 @@ for src in "$LOCAL_DIR/modules"/*.sh; do
   [[ -x "$src" ]] || continue
   name=$(basename "$src" .sh)
   (
-    exec "$src"
+    while true; do
+      "$src" 2>/dev/null
+      sleep 0.5
+    done
   ) | while IFS= read -r line; do
     echo "${name}:${line}"
-  done > "$FIFO" &
+  done > "$FIFO" 2>/dev/null &
+  MOD_PIDS+=($!)
 done
 
 exec 3< "$FIFO"

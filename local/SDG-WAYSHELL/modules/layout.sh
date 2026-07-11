@@ -38,6 +38,9 @@ if ! command -v mmsg &>/dev/null || ! command -v jq &>/dev/null; then
     exit 1
 fi
 
-while read -r line; do
-    process_tags_update "$line"
-done < <(mmsg watch all-tags 2>/dev/null)
+while true; do
+    while read -r line; do
+        process_tags_update "$line"
+    done < <(mmsg watch all-tags 2>/dev/null)
+    sleep 0.5
+done
