@@ -1,0 +1,4 @@
+
+[templates.wayshellbars]
+input_path = '~/.config/matugen/templates/InioX/colors.css'
+output_path = '~/.config/SDG-WAYSHELL-CONFIGS/colors.css'

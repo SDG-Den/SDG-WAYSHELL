@@ -2,7 +2,7 @@ Package Name: sdg-wayshell
 Descriptive Name: SDG Wayshell Event Manager
 Source: https://github.com/SDG-Den/SDG-WAYSHELL
 Maintainer: SDGDen
-Version:0.2
+Version:0.3
 
 Dependencies: 
 mangowm, waybar, jq, bash
