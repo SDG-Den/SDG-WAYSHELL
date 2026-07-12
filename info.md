@@ -1,7 +1,7 @@
 Package Name: sdg-wayshell
 Descriptive Name: SDG Wayshell Event Manager
-Source: https://git.sdgcloud.nl/SDGDen/SDG-WAYSHELL
-Maintainer: SDGDen <sdgden@sdgcloud.nl>
+Source: https://github.com/SDG-Den/SDG-WAYSHELL
+Maintainer: SDGDen
 Version:0.2
 
 Dependencies: 
