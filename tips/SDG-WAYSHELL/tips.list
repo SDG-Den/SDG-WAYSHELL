@@ -1,12 +1,10 @@
-# SDG-WAYSHELL Tips
-
-1. Volume OSD appears when moving cursor to the right edge of any monitor
-2. Brightness OSD appears when moving cursor to the left edge of any monitor
-3. Screenshot toolbar appears at the top-center of any monitor
-4. Monocle bars show window switchers per monitor when in monocle/deck layouts
-5. Elevated (root/sudo) processes are listed in the bottom-left zone
-6. Focused process CPU, RAM, and GPU usage in the bottom-right zone
-7. Layout-switching bars change automatically — no manual toggle needed
-8. Config hot-reload: `pkill wayshell && wayshell &` picks up changes to wayshell.conf and wayshell.modules
-9. Matugen Material You colors apply to all bars dynamically via colors.css import
-10. Cursor zone sensitivity is controlled by zone_buffer in wayshell.conf (default: 30px from edge)
+[SDG-WAYSHELL]: Volume OSD appears when moving cursor to the right edge of any monitor
+[SDG-WAYSHELL]: Brightness OSD appears when moving cursor to the left edge of any monitor
+[SDG-WAYSHELL]: Screenshot toolbar appears at the top-center of any monitor
+[SDG-WAYSHELL]: Monocle bars show window switchers per monitor when in monocle/deck layouts
+[SDG-WAYSHELL]: Elevated (root/sudo) processes are listed in the bottom-left zone
+[SDG-WAYSHELL]: Focused process CPU, RAM, and GPU usage in the bottom-right zone
+[SDG-WAYSHELL]: Layout-switching bars change automatically — no manual toggle needed
+[SDG-WAYSHELL]: Config hot-reload: `pkill wayshell && wayshell &` picks up changes to wayshell.conf and wayshell.modules
+[SDG-WAYSHELL]: Matugen Material You colors apply to all bars dynamically via colors.css import
+[SDG-WAYSHELL]: Cursor zone sensitivity is controlled by zone_buffer in wayshell.conf (default: 30px from edge)
