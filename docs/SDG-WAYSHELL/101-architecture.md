@@ -1,5 +1,7 @@
 # Wayshell Architecture
 
+Wayshell is a background daemon that makes on-screen controls (volume bar, brightness bar, screenshot toolbar) appear when you move your mouse to the edge of the screen. Most users never need to interact with it directly.
+
 ## Overview
 
 Wayshell is a trailing-edge debounced event manager daemon. It spawns event source subprocesses that pipe JSON events through a FIFO, routes them to type-specific handlers, and fires ON/OFF actions after configurable debounce delays.
