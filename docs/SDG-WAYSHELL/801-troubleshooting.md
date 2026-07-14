@@ -5,7 +5,7 @@
 | Symptom | Likely Cause | Fix |
 |---------|-------------|-----|
 | `wayshell: command not found` | Symlink missing | Run `install.sh` or manually: `sudo ln -sf ~/.local/SDG-WAYSHELL/wayshell.sh /usr/bin/wayshell` |
-| `mmsg: command not found` | SDG-MANGO-CORE not installed | Install SDG-MANGO-CORE (provides mangoWM + mmsg) |
+| `mmsg: command not found` | mangoWM not installed | Install SDG-MANGO-CORE (mmsg is bundled with mangoWM) |
 | `jq: command not found` | jq not installed | `unipkg install any jq` |
 | `waybar: command not found` | waybar not installed | `unipkg install any waybar` |
 | Script crashes on startup | Config files missing | Ensure `~/.config/SDG-WAYSHELL/wayshell.conf` and `wayshell.modules` exist |
@@ -16,7 +16,7 @@
 |---------|-------------|-----|
 | Nothing happens at screen edges | zone_buffer too small or wrong bounding box | Check `zone_buffer` in `wayshell.conf` and verify bounding box coordinates in `wayshell.modules` |
 | Screenshot/volume/brightness bars don't appear | SDG-WAYSHELL-CONFIGS not installed | Install SDG-WAYSHELL-CONFIGS — it provides the Waybar configs and action scripts |
-| Layout bars don't appear | SDG-MONOCLE not installed | `sdgpkg install sdg-monocle` |
+| Layout bars don't appear | SDG-WAYSHELL-CONFIGS not installed | `sdgpkg install sdg-wayshell-conf` |
 | Some zone modules work, others don't | Monitor resolution mismatch | Bounding boxes are hardcoded for 1920×1080. Adjust coordinates in `wayshell.modules` for your resolution |
 | `wayshell.modules` parsing error | Syntax error in module file | Check pipe-delimited format. Run `bash -n wayshell.sh` to verify no shell syntax errors |
 
