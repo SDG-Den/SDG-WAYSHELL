@@ -31,9 +31,9 @@ Scripts for the top-center zone toolbar:
 
 | Script | Purpose |
 |--------|---------|
-| `ss-capture.sh` | Screenshot capture (4 modes: output/area/screen/window) |
+| `ss-capture.sh` | Screenshot capture (4 modes: output/area/screen/active) |
 | `ss-mode.sh` | Displays current capture mode icon |
-| `ss-mode-cycle.sh` | Cycles save mode (clipboard → file → editor) |
+| `ss-mode-cycle.sh` | Cycles save mode (clipboard → disk → editor) |
 | `ss-settings.sh` | Displays settings tooltip |
 | `ss-settings-menu.sh` | Opens settings dialog (zenity) |
 
@@ -41,9 +41,9 @@ Capture modes:
 - **output** — current monitor via `grim -o`
 - **area** — interactive region via `slurp`
 - **screen** — all monitors
-- **window** — focused client geometry via `mmsg get focusing-client`
+- **active** — focused client geometry via `mmsg get focusing-client`
 
-Save modes: clipboard (`wl-copy`), disk (`~/Pictures/Screenshots/`), editor (default: gimp). Stored in `~/.config/screenshot.state`.
+Save modes: clipboard (`wl-copy`), disk (`~/Pictures/Screenshots/`), editor (default: gimp). Stored in `~/.config/screenshot.state` as `mode=clipboard`, `mode=disk`, `mode=editor`.
 
 Waybar config: `screenshot/screenshot.json` + `screenshot/screenshot.css`
 
@@ -57,6 +57,7 @@ Scripts for the bottom-left zone (root/sudo process detection):
 | `elevated-daemon.sh pin` | Pin/unpin icon |
 | `elevated-daemon.sh cap` | Elevated process count badge |
 | `elevated-daemon.sh <N>` | Client title at position N (1–5) |
+| `elevated-cap.sh` | Outputs "sudo" label when visible |
 | `elevated-show.sh` | Zone ON handler — sets visible flag, launches bottom bar |
 | `elevated-hide.sh` | Zone OFF handler — checks pin, clears flag, kills bar |
 | `elevated-pin.sh` | Toggles pin state |

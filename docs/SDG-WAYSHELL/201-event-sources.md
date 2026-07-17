@@ -37,7 +37,7 @@ Subscribes to `mmsg watch all-tags` for real-time layout change notifications.
 
 ## `focused.sh` — Focus Change Detection
 
-Subscribes to `mmsg watch focusing-client` for real-time focus change notifications.
+Subscribes to `mmsg watch focusing-client` for real-time focus change notifications. The mmsg IPC uses the field name `.appid` (no underscore); the subprocess emits JSON with the key `app_id` for consistency.
 
 ### Behavior
 - Tracks the previously focused `app_id`

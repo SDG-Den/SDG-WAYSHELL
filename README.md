@@ -30,7 +30,7 @@ pkill wayshell            # Stop the daemon
 
 Auto-started from SDG-MANGO-CORE's `autostart.conf`:
 ```
-exec-once=~/.local/SDG-WAYSHELL/wayshell.sh
+exec-once=wayshell
 ```
 
 ## Configuration
@@ -57,6 +57,7 @@ sdgpkg install sdg-wayshell
 - `waybar` — popup bar rendering
 - `jq` — JSON parsing of mmsg output
 - `bash` — runtime
+- `pkill` / `pgrep` — process management (procps-ng)
 
 ## Related Packages
 

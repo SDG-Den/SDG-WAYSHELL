@@ -2,6 +2,5 @@
 [SDG-WAYSHELL]: Move cursor to the left edge of any monitor to trigger the brightness OSD
 [SDG-WAYSHELL]: Move cursor to the top-center of any monitor for the screenshot toolbar
 [SDG-WAYSHELL]: Monocle bars appear automatically when using monocle or deck layouts
-[SDG-WAYSHELL]: Hot-reload config changes: pkill wayshell && wayshell & picks up edits to wayshell.conf and wayshell.modules
 [SDG-WAYSHELL]: Cursor zone sensitivity is controlled by zone_buffer in wayshell.conf (default 30px from edge)
 [SDG-WAYSHELL]: Matugen colours apply to all bars dynamically via colors.css import — no manual colour editing needed

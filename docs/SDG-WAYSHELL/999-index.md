@@ -1,5 +1,14 @@
 # Index
 
+## Usage Guides
+
+- [001-quickstart](001-quickstart.md) — Install, run, verify wayshell is working
+- [002-usage-guide](002-usage-guide.md) — Day-to-day usage: cursor zones, layout bars, focus events
+- [003-configuration-guide](003-configuration-guide.md) — Adjusting timing, zone sensitivity, and module definitions
+- [004-tips](004-tips.md) — Tips and troubleshooting suggestions
+
+## Technical Reference
+
 - [101-architecture](101-architecture.md) — Wayshell trailing-edge debounced event manager architecture
 - [102-dependencies](102-dependencies.md) — Required dependencies for Wayshell
 - [103-lifecycle](103-lifecycle.md) — Startup, lifecycle, and installation instructions

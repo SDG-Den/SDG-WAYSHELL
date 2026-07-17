@@ -12,8 +12,9 @@ The install script:
 3. Copies `local/*` → `~/.local/`
 4. Copies `docs/*` → `~/.local/docs/SDG-WAYSHELL/`
 5. Copies `tips/*` → `~/.local/tips/SDG-WAYSHELL/`
-6. Makes scripts executable
-7. Symlinks `~/.local/SDG-WAYSHELL/wayshell.sh` → `/usr/bin/wayshell`
+6. Copies `matugen/*` → `~/.local/matugen/`
+7. Makes scripts executable
+8. Symlinks `~/.local/SDG-WAYSHELL/wayshell.sh` → `/usr/bin/wayshell`
 
 ## File Layout
 
@@ -46,7 +47,7 @@ The install script:
 Wayshell is auto-started by SDG-MANGO-CORE's `autostart.conf`:
 
 ```
-exec-once=~/.local/SDG-WAYSHELL/wayshell.sh
+exec-once=wayshell
 ```
 
 ## Running Manually
@@ -65,7 +66,7 @@ sdgpkg update sdg-wayshell
 # ./update.sh
 ```
 
-The update script replaces `~/.local/SDG-WAYSHELL/`, docs, and tips, then re-creates the symlink. Config files in `~/.config/` are **not** touched.
+The update script replaces `~/.local/SDG-WAYSHELL/`, docs, tips, and the matugen template, then re-creates the symlink. Config files in `~/.config/` are **not** touched.
 
 ## Uninstalling
 
@@ -75,4 +76,4 @@ sdgpkg remove sdg-wayshell
 # ./uninstall.sh
 ```
 
-Removes `~/.local/SDG-WAYSHELL/`, `~/.local/docs/SDG-WAYSHELL/`, `~/.local/tips/SDG-WAYSHELL/`, and the `/usr/bin/wayshell` symlink. Config files in `~/.config/` are left in place.
+Removes `~/.local/SDG-WAYSHELL/`, `~/.local/docs/SDG-WAYSHELL/`, `~/.local/tips/SDG-WAYSHELL/`, `~/.local/matugen/01-wayshell.toml`, and the `/usr/bin/wayshell` symlink. Config files in `~/.config/` are left in place.
