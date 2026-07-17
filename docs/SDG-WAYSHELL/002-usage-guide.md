@@ -1,6 +1,12 @@
 # Usage Guide
 
-Wayshell monitors three kinds of events and shows popups in response.
+Wayshell monitors three kinds of events and shows popups in response. The popup content (volume bar, brightness bar, screenshot toolbar, process monitors) is provided by **SDG-WAYSHELL-CONFIGS** — without this package installed, wayshell will run but has no popup functions to display.
+
+## Installation
+
+```bash
+sdgpkg install sdg-wayshell-conf
+```
 
 ## Cursor Zones
 

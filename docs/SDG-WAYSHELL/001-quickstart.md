@@ -4,16 +4,12 @@
 
 Wayshell is a background daemon for mangoWM that watches what you're doing — where your cursor is, which layout you're using, which window is focused — and shows context-appropriate popups. Move your mouse to the right edge of the screen and a volume slider appears. Switch to monocle layout and a window switcher bar shows up.
 
+The actual popup content (volume bar, brightness bar, screenshot toolbar, process monitors) is provided by the **SDG-WAYSHELL-CONFIGS** package. Without it, wayshell runs but has nothing to display.
+
 ## Installation
 
 ```bash
 sdgpkg install sdg-wayshell
-```
-
-If you don't use `sdgpkg`, run the install script directly:
-
-```bash
-chmod +x install.sh && ./install.sh
 ```
 
 ## Starting Wayshell
@@ -27,7 +23,7 @@ This runs in the foreground. Press `Ctrl+C` to stop.
 To run in the background:
 
 ```bash
-wayshell &
+mmsg dispatch spawn_shell,wayshell
 ```
 
 ## Verifying It's Running

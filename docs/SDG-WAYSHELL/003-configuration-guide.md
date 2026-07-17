@@ -11,19 +11,19 @@ This file is sourced directly by the daemon. It controls timings that affect how
 
 ### Parameters
 
-| Key | Default | Description |
-|-----|---------|-------------|
-| `zone_buffer` | `10` | Pixels from screen edge that counts as "in zone" |
-| `on_delay` | `100` | Default ON debounce in ms (fallback) |
-| `off_delay` | `100` | Default OFF debounce in ms (fallback) |
-| `zone_on_delay` | `100` | Zone ON override |
-| `zone_off_delay` | `100` | Zone OFF override |
-| `layout_on_delay` | `100` | Layout ON override |
-| `layout_off_delay` | `100` | Layout OFF override |
-| `focused_on_delay` | `100` | Focused ON override |
-| `focused_off_delay` | `100` | Focused OFF override |
+| Key | Description |
+|-----|-------------|
+| `zone_buffer` | Pixels from screen edge that counts as "in zone" |
+| `on_delay` | Default ON debounce in ms (fallback for all types) |
+| `off_delay` | Default OFF debounce in ms (fallback for all types) |
+| `zone_on_delay` | Zone ON debounce override |
+| `zone_off_delay` | Zone OFF debounce override |
+| `layout_on_delay` | Layout ON debounce override |
+| `layout_off_delay` | Layout OFF debounce override |
+| `focused_on_delay` | Focused ON debounce override |
+| `focused_off_delay` | Focused OFF debounce override |
 
-Per-type overrides fall back to `on_delay`/`off_delay` if unset.
+Per-type overrides fall back to `on_delay`/`off_delay` if unset. If no value is set in the config file, the daemon defaults to `zone_buffer=10` and all delays `100ms`.
 
 ### Tuning Tips
 

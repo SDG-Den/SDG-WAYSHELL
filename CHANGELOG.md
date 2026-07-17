@@ -1,3 +1,9 @@
+#  sdg-wayshell update 0.4
+    
+## changelog 0.3 > 0.4
+
+documentation updated.
+
 #  sdg-wayshell update 0.3
     
 ## changelog 0.2 > 0.3
